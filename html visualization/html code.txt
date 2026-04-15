@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>R-AML-UAN | Research Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;600&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d1117;
+  --panel:#161b22;
+  --border:#30363d;
+  --accent:#58a6ff;
+  --opt:#3fb950;
+  --acu:#f85149;
+  --dec:#d29922;
+  --txt:#8b949e;
+  --txt-bright:#c9d1d9;
+}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:'Inter',sans-serif;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  font-size:11px;
+}
+
+header{
+  height:40px;
+  padding:0 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--panel);
+  flex-shrink:0;
+}
+.hdr-title{
+  font-family:'JetBrains Mono';
+  font-size:11px;font-weight:500;
+  color:var(--txt-bright);
+}
+.hdr-right{display:flex;gap:12px;align-items:center;}
+
+.btn{
+  font-family:'JetBrains Mono';
+  font-size:10px;padding:3px 10px;
+  border-radius:2px;border:1px solid var(--border);
+  color:var(--txt-bright);background:#21262d;
+  cursor:pointer;transition:all 0.1s;
+}
+.btn:hover{background:#30363d;border-color:var(--txt);}
+.btn-run{border-color:var(--opt);color:var(--opt);background:transparent;}
+.btn-run.active{border-color:var(--acu);color:var(--acu);}
+.upload-wrap{position:relative;}
+#csvInput{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+
+.spd-wrap{display:flex;align-items:center;gap:8px;font-size:9px;}
+input[type=range]{
+  -webkit-appearance:none;background:var(--border);
+  height:2px;width:60px;outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:8px;height:8px;
+  background:var(--accent);border-radius:0;
+}
+#simClock{font-family:'JetBrains Mono';font-size:10px;color:var(--accent);}
+
+.body{display:flex;flex:1;overflow:hidden;}
+.canvas-col{flex:1;background:#010409;position:relative;overflow:hidden;}
+canvas{display:block;width:100%;height:100%;}
+
+/* Right panel */
+.right-panel{
+  width:280px;flex-shrink:0;
+  border-left:1px solid var(--border);
+  background:var(--panel);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.rp-block{padding:12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rp-label{
+  font-family:'JetBrains Mono';font-size:9px;
+  color:var(--accent);margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.stat{border:1px solid var(--border);padding:8px;background:var(--bg);}
+.stat-l{font-size:8px;text-transform:uppercase;color:var(--txt);}
+.stat-v{font-size:14px;font-family:'JetBrains Mono';color:var(--txt-bright);margin-top:2px;}
+
+/* Mode bars */
+.mode-bars{margin-top:8px;}
+.mb-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:9px;font-family:'JetBrains Mono';}
+.mb-lbl{width:48px;color:var(--txt);}
+.mb-track{flex:1;height:2px;background:var(--border);}
+.mb-fill{height:100%;transition:width 0.3s;}
+.mb-pct{width:28px;text-align:right;color:var(--txt-bright);}
+
+/* Enemy */
+.enemy-card{
+  background:var(--bg);border:1px solid var(--border);
+  padding:8px;margin-bottom:4px;
+}
+.enemy-card:last-child{margin-bottom:0;}
+.ec-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.ec-name{font-family:'JetBrains Mono';font-size:10px;color:var(--txt-bright);}
+.ec-badge{
+  font-family:'JetBrains Mono';font-size:8px;
+  padding:1px 5px;border:1px solid;
+}
+.b-patrol{border-color:rgba(88,166,255,0.4);color:var(--accent);}
+.b-alert{border-color:rgba(248,81,73,0.5);color:var(--acu);}
+.b-dec{border-color:rgba(210,153,34,0.5);color:var(--dec);}
+.b-blind{border-color:rgba(200,200,200,0.3);color:#ccc;}
+.ec-row{display:flex;justify-content:space-between;font-size:9px;font-family:'JetBrains Mono';color:var(--txt);margin-bottom:2px;}
+.ec-row span{color:var(--txt-bright);}
+
+/* Stealth */
+.stealth-val{font-size:20px;font-family:'JetBrains Mono';color:var(--opt);}
+.stealth-track{height:2px;background:var(--border);margin-top:8px;}
+.stealth-fill{height:100%;background:var(--opt);width:0%;transition:width 0.4s;}
+.stealth-sub{font-size:8px;color:var(--txt);margin-top:4px;font-family:'JetBrains Mono';}
+
+/* Log */
+.log-area{
+  flex:1;overflow-y:auto;padding:10px;
+  font-family:'JetBrains Mono';font-size:10px;
+  background:var(--bg);
+}
+.log-area::-webkit-scrollbar{width:3px;}
+.log-area::-webkit-scrollbar-thumb{background:var(--border);}
+.log-row{
+  border-left:1px solid var(--border);
+  padding-left:8px;margin-bottom:3px;
+  line-height:1.5;display:flex;gap:8px;
+  font-size:9px;
+}
+.lr-time{color:var(--accent);opacity:0.7;flex-shrink:0;width:36px;}
+.lr-mode{flex-shrink:0;width:60px;font-weight:500;}
+.lr-info{color:var(--txt-bright);flex:1;}
+.lr-tag{
+  font-size:8px;padding:0 3px;
+  border:1px solid;display:inline-block;
+  margin-left:4px;vertical-align:middle;
+}
+.tag-hit{border-color:rgba(210,153,34,0.5);color:var(--dec);}
+.tag-det{border-color:rgba(248,81,73,0.5);color:var(--acu);}
+.tag-miss{border-color:rgba(63,185,80,0.4);color:var(--opt);}
+
+/* CSV error banner */
+.csv-warn{
+  font-family:'JetBrains Mono';font-size:9px;
+  color:var(--dec);background:#2a1f00;
+  border:1px solid rgba(210,153,34,0.3);
+  padding:4px 8px;margin:4px 0;
+  display:none;
+}
+
+/* Bottom bar */
+.bottom-bar{
+  border-top:1px solid var(--border);
+  display:flex;height:88px;
+  background:var(--panel);flex-shrink:0;
+}
+.nb{
+  flex:1;border-right:1px solid var(--border);
+  padding:8px 10px;font-size:9px;
+  line-height:1.6;font-family:'JetBrains Mono';
+}
+.nb:last-child{border-right:none;}
+.nb-id{
+  font-size:10px;font-weight:500;
+  color:var(--txt-bright);margin-bottom:3px;
+  border-bottom:1px solid var(--border);
+  padding-bottom:2px;
+}
+.na-tag{
+  padding:0 4px;font-size:8px;font-weight:500;
+  border:1px solid;display:inline-block;
+}
+.na-opt{border-color:rgba(63,185,80,0.5);color:var(--opt);}
+.na-acu{border-color:rgba(248,81,73,0.5);color:var(--acu);}
+.na-dec{border-color:rgba(210,153,34,0.5);color:var(--dec);}
+.na-idle{border-color:var(--border);color:var(--txt);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-title">DATA_VISUALIZER // R-AML-UAN HYBRID DRL UNDERWATER NETWORK</div>
+  <div class="hdr-right">
+    <div class="upload-wrap">
+      <button class="btn">LOAD_DATA</button>
+      <input type="file" id="csvInput" accept=".csv" onchange="loadCSV(this)">
+    </div>
+    <button class="btn btn-run" id="playBtn" onclick="togglePlay()">EXECUTE</button>
+    <button class="btn" onclick="resetSim()">RESET</button>
+    <div class="spd-wrap">RATE <input type="range" id="spd" min="50" max="900" value="200"></div>
+    <div id="simClock">T+ 0.0s</div>
+  </div>
+</header>
+
+<div class="body">
+  <div class="canvas-col"><canvas id="c"></canvas></div>
+
+  <div class="right-panel">
+
+    <!-- Telemetry -->
+    <div class="rp-block">
+      <div class="rp-label">Telemetry_Summary</div>
+      <div id="csvWarn" class="csv-warn"></div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-l">Optical</div><div class="stat-v" id="sOpt" style="color:var(--opt)">0</div></div>
+        <div class="stat"><div class="stat-l">Acoustic</div><div class="stat-v" id="sAcu" style="color:var(--acu)">0</div></div>
+        <div class="stat"><div class="stat-l">Decoy</div><div class="stat-v" id="sDec" style="color:var(--dec)">0</div></div>
+        <div class="stat"><div class="stat-l">Reward_Σ</div><div class="stat-v" id="sRew">0.0</div></div>
+        <div class="stat"><div class="stat-l">Epsilon_ε</div><div class="stat-v" id="sEps">—</div></div>
+        <div class="stat"><div class="stat-l">Packet</div><div class="stat-v" id="sPkt">0</div></div>
+      </div>
+      <div class="mode-bars">
+        <div class="mb-row"><div class="mb-lbl">OPTICAL</div><div class="mb-track"><div class="mb-fill" id="bOpt" style="background:var(--opt);width:0%"></div></div><div class="mb-pct" id="pOpt">0%</div></div>
+        <div class="mb-row"><div class="mb-lbl">ACOUSTIC</div><div class="mb-track"><div class="mb-fill" id="bAcu" style="background:var(--acu);width:0%"></div></div><div class="mb-pct" id="pAcu">0%</div></div>
+        <div class="mb-row"><div class="mb-lbl">DECOY</div><div class="mb-track"><div class="mb-fill" id="bDec" style="background:var(--dec);width:0%"></div></div><div class="mb-pct" id="pDec">0%</div></div>
+      </div>
+    </div>
+
+    <!-- Enemies -->
+    <div class="rp-block">
+      <div class="rp-label">Threat_Contacts</div>
+      <div class="enemy-card">
+        <div class="ec-top"><span class="ec-name">TARGET_00</span><span class="ec-badge b-patrol" id="es0">PATROL</span></div>
+        <div class="ec-row">Detections <span id="ed0">0</span></div>
+        <div class="ec-row">Decoy_hits <span id="edd0">0</span></div>
+        <div class="ec-row">Bearing <span id="ef0">—</span></div>
+      </div>
+      <div class="enemy-card">
+        <div class="ec-top"><span class="ec-name">TARGET_01</span><span class="ec-badge b-patrol" id="es1">PATROL</span></div>
+        <div class="ec-row">Detections <span id="ed1">0</span></div>
+        <div class="ec-row">Decoy_hits <span id="edd1">0</span></div>
+        <div class="ec-row">Bearing <span id="ef1">—</span></div>
+      </div>
+    </div>
+
+    <!-- Stealth -->
+    <div class="rp-block">
+      <div class="rp-label">Stealth_Index</div>
+      <div class="stealth-val" id="stealth">0.0%</div>
+      <div class="stealth-track"><div class="stealth-fill" id="stealthBar"></div></div>
+      <div class="stealth-sub">// Σdecoy_hits / (Σreal_det + Σdecoy_hits) per enemy</div>
+    </div>
+
+    <!-- Log -->
+    <div class="rp-block" style="border-bottom:none;padding-bottom:4px;flex-shrink:0;">
+      <div class="rp-label">Process_Log</div>
+    </div>
+    <div class="log-area" id="logDiv"></div>
+
+  </div>
+</div>
+
+<div class="bottom-bar" id="bottomBar"></div>
+
+<script>
+// ── Canvas ──────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+function resize(){
+  canvas.width  = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Topology ────────────────────────────────────────────────────
+const NODES = [
+  {id:0, sx:60,  sy:200, label:'NODE_00', role:'SRC'},
+  {id:1, sx:140, sy:200, label:'NODE_01', role:'RLY'},
+  {id:2, sx:320, sy:200, label:'NODE_02', role:'RLY'},
+  {id:3, sx:420, sy:200, label:'NODE_03', role:'RLY'},
+  {id:4, sx:560, sy:200, label:'NODE_04', role:'RLY'},
+  {id:5, sx:660, sy:200, label:'NODE_05', role:'SNK'},
+];
+const DISTS = [75, 201.6, 90, 150, 85];
+const SIM_W = 740, SIM_H = 460;
+
+// Required CSV columns — used for validation
+const REQUIRED_COLS = ['Src','Dst','Mode','Time'];
+
+function s2c(sx, sy){
+  const px=80, py=60;
+  return [px + sx*(canvas.width-px*2)/SIM_W,
+          py + sy*(canvas.height-py*2)/SIM_H];
+}
+
+// ── Enemy patrol paths ──────────────────────────────────────────
+const PATROLS = [
+  [{t:0,x:300,y:400},{t:100,x:380,y:350},{t:200,x:280,y:320},
+   {t:250,x:130,y:220},{t:300,x:180,y:360},{t:400,x:480,y:400},
+   {t:450,x:390,y:220},{t:500,x:340,y:310},{t:600,x:340,y:310}],
+  [{t:0,x:580,y:420},{t:50,x:600,y:380},{t:150,x:540,y:310},
+   {t:250,x:440,y:340},{t:350,x:630,y:195},{t:450,x:490,y:300},
+   {t:520,x:570,y:215},{t:600,x:570,y:215}]
+];
+
+function ePos(eId, t){
+  const p=PATROLS[eId];
+  // clamp t to patrol range so enemies don't freeze awkwardly
+  const tMax = p[p.length-1].t;
+  if(t > tMax) t = tMax;
+  for(let i=0;i<p.length-1;i++){
+    if(t>=p[i].t&&t<=p[i+1].t){
+      const a=(t-p[i].t)/(p[i+1].t-p[i].t);
+      return {x:p[i].x+(p[i+1].x-p[i].x)*a,
+              y:p[i].y+(p[i+1].y-p[i].y)*a};
+    }
+  }
+  return p[p.length-1];
+}
+function eFacing(x,y){ return Math.atan2(200-y, 350-x); }
+
+const WCOL = {
+  PRISTINE:'#1a7a9a', CLEAR:'#1a5a8a', HAZY:'#4a6a7a',
+  COASTAL:'#6a7a4a', MURKY:'#8a5010', MUDDY:'#5a2a10', THERMAL:'#6a1a8a'
+};
+
+// ── State ───────────────────────────────────────────────────────
+let csvRows=[], playIdx=0, playing=false, timer=null, simTime=0;
+let optCnt=0, acuCnt=0, decCnt=0, totalRew=0;
+let packets=[];
+
+// Per-enemy tracking: detections and decoy hits stored independently
+// FIX: eStats tracks realDet and decoyHits per enemy (0 and 1)
+let eStats = [{realDet:0, decoyHits:0}, {realDet:0, decoyHits:0}];
+
+// FIX: flash uses an end-timestamp (performance.now() based) instead of
+// a decaying float driven by requestAnimationFrame — frame-rate independent
+function makeNodeState(){
+  return {water:'CLEAR',action:'IDLE',energy:5000,optLQ:0,acuLQ:0,flashEnd:0};
+}
+function makeEnemyState(){
+  return {dec:false,alert:false,blind:false,flashEnd:0,flashCol:'#f85149'};
+}
+
+let nState = NODES.map(makeNodeState);
+let eState = [makeEnemyState(), makeEnemyState()];
+
+// ── DRAW ────────────────────────────────────────────────────────
+
+function drawBg(){
+  ctx.fillStyle='#010409';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='#161b22';
+  ctx.lineWidth=1;
+  for(let x=0;x<canvas.width;x+=50){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();
+  }
+  for(let y=0;y<canvas.height;y+=50){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();
+  }
+  ctx.fillStyle='#21262d';
+  ctx.font='8px JetBrains Mono';
+  ctx.textAlign='left';
+  for(let x=0;x<canvas.width;x+=100){
+    ctx.fillText(x,x+2,canvas.height-3);
+  }
+}
+
+function drawSonarBeam(ex, ey, facing){
+  const [cx,cy]=s2c(ex,ey);
+  const scl=(canvas.width-160)/SIM_W;
+  const len=160*scl;
+  const half=Math.PI/3;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,len,facing-half,facing+half);
+  ctx.closePath();
+  ctx.fillStyle='rgba(88,166,255,0.04)';
+  ctx.fill();
+  ctx.strokeStyle='rgba(88,166,255,0.2)';
+  ctx.lineWidth=1;
+  ctx.setLineDash([3,5]);
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(facing-half)*len,cy+Math.sin(facing-half)*len);
+  ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(facing+half)*len,cy+Math.sin(facing+half)*len);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  ctx.fillStyle='rgba(88,166,255,0.3)';
+  ctx.font='7px JetBrains Mono';
+  ctx.textAlign='center';
+  ctx.fillText('SONAR_60°',cx+Math.cos(facing)*len*0.6,cy+Math.sin(facing)*len*0.6);
+}
+
+function drawOptRange(ex, ey){
+  const [cx,cy]=s2c(ex,ey);
+  const scl=(canvas.width-160)/SIM_W;
+  const r=80*scl;
+  ctx.save();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(210,153,34,0.2)';
+  ctx.lineWidth=1;
+  ctx.setLineDash([2,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  ctx.fillStyle='rgba(210,153,34,0.3)';
+  ctx.font='7px JetBrains Mono';
+  ctx.textAlign='center';
+  ctx.fillText('OPT_80m',cx,cy-r-3);
+}
+
+function drawEnemy(eId, t){
+  const pos=ePos(eId,t);
+  const facing=eFacing(pos.x,pos.y);
+  const es=eState[eId];
+  const [cx,cy]=s2c(pos.x,pos.y);
+
+  drawSonarBeam(pos.x,pos.y,facing);
+  drawOptRange(pos.x,pos.y);
+
+  // FIX: flash is now time-based, not frame-based
+  const now=performance.now();
+  const flashing=es.flashEnd>now;
+
+  let col='#f85149';
+  if(es.dec)   col='#d29922';
+  if(es.blind) col='#8b949e';
+  if(flashing) col=es.flashCol;
+
+  const hw=10;
+  ctx.strokeStyle=col;
+  ctx.lineWidth=1;
+  ctx.strokeRect(cx-hw,cy-hw,hw*2,hw*2);
+  ctx.beginPath();
+  ctx.moveTo(cx-hw-5,cy);ctx.lineTo(cx-hw,cy);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx+hw,cy);ctx.lineTo(cx+hw+5,cy);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-hw-5);ctx.lineTo(cx,cy-hw);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx,cy+hw);ctx.lineTo(cx,cy+hw+5);ctx.stroke();
+
+  ctx.fillStyle=col;
+  ctx.fillRect(cx-2,cy-2,4,4);
+
+  ctx.strokeStyle=col+'80';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  const ax=cx+Math.cos(facing)*20,ay=cy+Math.sin(facing)*20;
+  ctx.lineTo(ax,ay);ctx.stroke();
+  ctx.save();
+  ctx.translate(ax,ay);ctx.rotate(facing);
+  ctx.fillStyle=col+'80';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-5,-2);ctx.lineTo(-5,2);ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle=col;
+  ctx.font='8px JetBrains Mono';
+  ctx.textAlign='center';
+  ctx.textBaseline='bottom';
+  let lbl=`TARGET_0${eId}`;
+  if(es.dec)   lbl+=' [DECEIVED]';
+  if(es.blind) lbl+=' [BLIND]';
+  if(es.alert) lbl+=' [ALERT]';
+  ctx.fillText(lbl,cx,cy-hw-5);
+  ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle='rgba(88,166,255,0.4)';
+  ctx.font='7px JetBrains Mono';
+  ctx.fillText(`BRG:${(facing*180/Math.PI).toFixed(0)}°`,cx,cy+hw+12);
+}
+
+function drawLinks(){
+  for(let i=0;i<NODES.length-1;i++){
+    const [ax,ay]=s2c(NODES[i].sx,NODES[i].sy);
+    const [bx,by]=s2c(NODES[i+1].sx,NODES[i+1].sy);
+    ctx.strokeStyle='#21262d';
+    ctx.lineWidth=1;
+    ctx.setLineDash([4,5]);
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#30363d';
+    ctx.font='8px JetBrains Mono';
+    ctx.textAlign='center';
+    ctx.textBaseline='bottom';
+    ctx.fillText(DISTS[i]+'m',(ax+bx)/2,(ay+by)/2-4);
+  }
+}
+
+function drawNode(n, ns){
+  const [cx,cy]=s2c(n.sx,n.sy);
+  const wc=WCOL[ns.water]||'#1a5a8a';
+
+  let col='#30363d';
+  if(ns.action==='OPTICAL')  col='#3fb950';
+  else if(ns.action==='ACOUSTIC') col='#f85149';
+  else if(ns.action==='DECOY')    col='#d29922';
+
+  // FIX: flash ring uses timestamp — frame-rate independent
+  const now=performance.now();
+  if(ns.flashEnd>now){
+    const progress=1-((ns.flashEnd-now)/600); // 600ms flash duration
+    ctx.strokeStyle=col+Math.floor((1-progress)*200).toString(16).padStart(2,'0');
+    ctx.lineWidth=1;
+    const expand=8*progress;
+    ctx.strokeRect(cx-14-expand,cy-14-expand,28+expand*2,28+expand*2);
+  }
+
+  ctx.strokeStyle=wc+'66';
+  ctx.lineWidth=2;
+  ctx.strokeRect(cx-9,cy-9,18,18);
+
+  ctx.strokeStyle=col;
+  ctx.lineWidth=1;
+  ctx.strokeRect(cx-7,cy-7,14,14);
+
+  ctx.strokeStyle=col;
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(cx-12,cy);ctx.lineTo(cx-7,cy);
+  ctx.moveTo(cx+7,cy);ctx.lineTo(cx+12,cy);
+  ctx.moveTo(cx,cy-12);ctx.lineTo(cx,cy-7);
+  ctx.moveTo(cx,cy+7);ctx.lineTo(cx,cy+12);
+  ctx.stroke();
+
+  ctx.fillStyle=col+'33';
+  ctx.fillRect(cx-7,cy-7,14,14);
+
+  ctx.fillStyle=col;
+  ctx.font='8px JetBrains Mono';
+  ctx.textAlign='center';
+  ctx.textBaseline='bottom';
+  ctx.fillText(n.label,cx,cy-14);
+
+  ctx.fillStyle='#30363d';
+  ctx.font='7px JetBrains Mono';
+  ctx.textBaseline='top';
+  ctx.fillText(n.role,cx,cy+14);
+
+  ctx.textBaseline='alphabetic';
+}
+
+function drawPackets(){
+  packets=packets.filter(p=>{
+    const t=Math.min((performance.now()-p.t0)/p.dur,1);
+    if(t>=1)return false;
+    const e=t<0.5?2*t*t:1-2*(1-t)*(1-t);
+    const [sx,sy]=s2c(NODES[p.src].sx,NODES[p.src].sy);
+    const [ex,ey]=s2c(NODES[p.dst].sx,NODES[p.dst].sy);
+    const x=sx+(ex-sx)*e, y=sy+(ey-sy)*e;
+    const col=p.mode==='OPTICAL'?'#3fb950':p.mode==='ACOUSTIC'?'#f85149':'#d29922';
+    ctx.strokeStyle=col+'44';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y);ctx.stroke();
+    ctx.fillStyle=col;
+    ctx.fillRect(x-3,y-3,6,6);
+    return true;
+  });
+}
+
+function drawLegend(){
+  const items=[
+    {col:'#3fb950',lbl:'OPTICAL — 500 THz, sonar-invisible, 0.5J'},
+    {col:'#f85149',lbl:'ACOUSTIC — 10 kHz, detectable, 2.0J'},
+    {col:'#d29922',lbl:'DECOY — fake burst, enemy trap, 3.0J'},
+    {col:'rgba(88,166,255,0.5)',lbl:'SONAR beam, 60° cone'},
+    {col:'rgba(210,153,34,0.4)',lbl:'Optical sensor range, 80m'},
+  ];
+  ctx.font='8px JetBrains Mono';
+  ctx.textAlign='left';
+  ctx.textBaseline='middle';
+  items.forEach((it,i)=>{
+    ctx.fillStyle=it.col;
+    ctx.fillRect(8,10+i*14,7,7);
+    ctx.fillStyle='#30363d';
+    ctx.fillText(it.lbl,20,13+i*14);
+  });
+}
+
+function drawFrame(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBg();
+  drawLegend();
+  drawLinks();
+  for(let e=0;e<2;e++) drawEnemy(e,simTime);
+  NODES.forEach((n,i)=>drawNode(n,nState[i]));
+  drawPackets();
+}
+
+(function loop(){requestAnimationFrame(loop);drawFrame();})();
+
+// ── Bottom bar ──────────────────────────────────────────────────
+// FIX: only rebuild bottom bar when content actually changes, not every step
+// (avoids layout thrashing at high step rates)
+let lastBottomHash='';
+function buildBottomBar(){
+  const hash=nState.map(ns=>`${ns.action}|${ns.water}|${ns.energy.toFixed(0)}|${ns.optLQ.toFixed(3)}|${ns.acuLQ.toFixed(3)}`).join(';');
+  if(hash===lastBottomHash)return;
+  lastBottomHash=hash;
+
+  const bar=document.getElementById('bottomBar');
+  bar.innerHTML=NODES.map((n,i)=>{
+    const ns=nState[i];
+    const wc=WCOL[ns.water]||'#1a5a8a';
+    const ac=ns.action==='OPTICAL'?'na-opt':
+             ns.action==='ACOUSTIC'?'na-acu':
+             ns.action==='DECOY'?'na-dec':'na-idle';
+    return `<div class="nb">
+      <div class="nb-id" style="color:${wc||'var(--txt-bright)'}">${n.label}</div>
+      STATUS: <span class="na-tag ${ac}">${ns.action}</span><br>
+      WATER: <span style="color:${wc}">${ns.water}</span><br>
+      ENERGY: ${ns.energy.toFixed(0)}J<br>
+      LQ: ${ns.optLQ.toFixed(3)} / ${ns.acuLQ.toFixed(3)}
+    </div>`;
+  }).join('');
+}
+buildBottomBar();
+
+// ── CSV Validation ───────────────────────────────────────────────
+function validateCSV(headers){
+  const missing=REQUIRED_COLS.filter(c=>!headers.includes(c));
+  const warn=document.getElementById('csvWarn');
+  if(missing.length>0){
+    warn.style.display='block';
+    warn.textContent=`WARN: missing columns: ${missing.join(', ')} — using defaults`;
+  } else {
+    warn.style.display='none';
+    warn.textContent='';
+  }
+  // Optional columns — inform user but do not block
+  const optional=['Water','Reward','Energy','OptLQ','AcuLQ','EnemyNearby','EnemyID','Epsilon','PktID'];
+  const missingOpt=optional.filter(c=>!headers.includes(c));
+  if(missingOpt.length>0){
+    console.info('R-AML-UAN: optional CSV columns not found (will use defaults):',missingOpt);
+  }
+}
+
+// ── CSV ─────────────────────────────────────────────────────────
+function loadCSV(input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const lines=e.target.result.trim().split('\n');
+    const hdrs=lines[0].split(',').map(h=>h.trim());
+    validateCSV(hdrs);
+    csvRows=[];
+    for(let i=1;i<lines.length;i++){
+      const vals=lines[i].split(',');
+      if(vals.length<2)continue;
+      const row={};
+      hdrs.forEach((h,j)=>row[h]=vals[j]?vals[j].trim():'');
+      csvRows.push(row);
+    }
+    document.getElementById('simClock').textContent=`${csvRows.length}_pkts_loaded`;
+    document.getElementById('simClock').style.color='#3fb950';
+  };
+  r.readAsText(file);
+}
+
+// ── Step ────────────────────────────────────────────────────────
+function step(){
+  if(playIdx>=csvRows.length){stop();return;}
+  const r=csvRows[playIdx++];
+
+  const src   = Math.max(0, Math.min(NODES.length-1, parseInt(r['Src'])||0));
+  const dst   = Math.max(0, Math.min(NODES.length-1, parseInt(r['Dst'])||1));
+  const mode  = (r['Mode']||'ACOUSTIC').toUpperCase();
+  const water = (r['Water']||'CLEAR').toUpperCase();
+  const rew   = parseFloat(r['Reward'])||0;
+  const eng   = parseFloat(r['Energy'])||5000;
+  const oLQ   = parseFloat(r['OptLQ'])||0;
+  const aLQ   = parseFloat(r['AcuLQ'])||0;
+  const time  = parseFloat(r['Time'])||0;
+  const near  = parseInt(r['EnemyNearby'])||0;
+  const eps   = r['Epsilon']||null;
+
+  // FIX: EnemyID column routes detection to the correct enemy (0 or 1)
+  // Falls back to 0 if column absent for backward compatibility
+  const eId   = Math.max(0, Math.min(1, parseInt(r['EnemyID'])||0));
+
+  simTime=time;
+
+  if(mode==='OPTICAL')       optCnt++;
+  else if(mode==='ACOUSTIC') acuCnt++;
+  else if(mode==='DECOY')    decCnt++;
+  totalRew+=rew;
+
+  // Node update
+  nState[src].action=mode;
+  nState[src].water=water;
+  nState[src].energy=eng;
+  nState[src].optLQ=oLQ;
+  nState[src].acuLQ=aLQ;
+  nState[src].flashEnd=performance.now()+600; // 600 ms flash, frame-rate independent
+
+  // Packet animation
+  const spd=parseInt(document.getElementById('spd').value);
+  if(dst<NODES.length && dst!==src)
+    packets.push({src,dst,mode,t0:performance.now(),dur:Math.min(spd*0.5,400)});
+
+  // ── Enemy logic ──
+  // FIX: all enemy state mutations now use eId (from CSV), not hardcoded 0
+  let tag='',tagClass='';
+  const FLASH_DUR=600;
+  if(near){
+    if(mode==='DECOY'){
+      // Probability of successful decoy scales with decoy effectiveness
+      const prob=5/(5+150/100);
+      if(Math.random()<prob){
+        eState[eId].dec=true;
+        eState[eId].flashEnd=performance.now()+FLASH_DUR;
+        eState[eId].flashCol='#d29922';
+        eStats[eId].decoyHits++;
+        tag='DECOY_HIT'; tagClass='tag-hit';
+      } else {
+        tag='DECOY_MISS'; tagClass='tag-miss';
+      }
+    } else if(mode==='ACOUSTIC'){
+      if(!eState[eId].dec){
+        eState[eId].alert=true;
+        eState[eId].flashEnd=performance.now()+FLASH_DUR;
+        eState[eId].flashCol='#f85149';
+        eStats[eId].realDet++;
+        tag='DETECTED'; tagClass='tag-det';
+      } else {
+        tag='MASKED'; tagClass='tag-miss';
+      }
+    }
+  }
+
+  // Periodic state reset per enemy — decoy effect wears off
+  if(playIdx%60===0){
+    eState[0].dec=false; eState[0].alert=false;
+    eState[1].dec=false; eState[1].alert=false;
+  }
+
+  // ── Stats panel ──
+  const tot=optCnt+acuCnt+decCnt||1;
+  document.getElementById('sOpt').textContent=optCnt;
+  document.getElementById('sAcu').textContent=acuCnt;
+  document.getElementById('sDec').textContent=decCnt;
+  document.getElementById('sRew').textContent=totalRew.toFixed(1);
+  document.getElementById('sPkt').textContent=`${playIdx}/${csvRows.length}`;
+  if(eps) document.getElementById('sEps').textContent=parseFloat(eps).toFixed(3);
+  document.getElementById('simClock').textContent=`T+ ${time.toFixed(1)}s`;
+  document.getElementById('simClock').style.color='#58a6ff';
+
+  document.getElementById('bOpt').style.width=(optCnt/tot*100)+'%';
+  document.getElementById('bAcu').style.width=(acuCnt/tot*100)+'%';
+  document.getElementById('bDec').style.width=(decCnt/tot*100)+'%';
+  document.getElementById('pOpt').textContent=Math.round(optCnt/tot*100)+'%';
+  document.getElementById('pAcu').textContent=Math.round(acuCnt/tot*100)+'%';
+  document.getElementById('pDec').textContent=Math.round(decCnt/tot*100)+'%';
+
+  // FIX: stealth index aggregates across both enemies for a global view
+  const totalRealDet   = eStats[0].realDet   + eStats[1].realDet;
+  const totalDecoyHits = eStats[0].decoyHits  + eStats[1].decoyHits;
+  const ss=(totalRealDet+totalDecoyHits)>0
+    ? (100*totalDecoyHits/(totalRealDet+totalDecoyHits))
+    : 0;
+  document.getElementById('stealth').textContent=ss.toFixed(1)+'%';
+  document.getElementById('stealthBar').style.width=Math.min(ss,100)+'%';
+
+  // FIX: each enemy card now shows its own independent detection counts
+  for(let e=0;e<2;e++){
+    const es=eState[e];
+    const el=document.getElementById(`es${e}`);
+    if(es.dec){       el.textContent='DECEIVED'; el.className='ec-badge b-dec';}
+    else if(es.blind){el.textContent='BLIND';    el.className='ec-badge b-blind';}
+    else if(es.alert){el.textContent='ALERT';    el.className='ec-badge b-alert';}
+    else{             el.textContent='PATROL';   el.className='ec-badge b-patrol';}
+
+    document.getElementById(`ed${e}`).textContent=eStats[e].realDet;
+    document.getElementById(`edd${e}`).textContent=eStats[e].decoyHits;
+
+    const p=ePos(e,simTime);
+    document.getElementById(`ef${e}`).textContent=
+      (eFacing(p.x,p.y)*180/Math.PI).toFixed(1)+'°';
+  }
+
+  buildBottomBar();
+
+  // ── Log ──
+  const mc=mode==='OPTICAL'?'#3fb950':mode==='ACOUSTIC'?'#f85149':'#d29922';
+  const div=document.createElement('div');
+  div.className='log-row';
+  div.innerHTML=
+    `<span class="lr-time">${time.toFixed(1)}s</span>`+
+    `<span class="lr-mode" style="color:${mc}">${mode}</span>`+
+    `<span class="lr-info">N${src}→N${dst} `+
+    (near?`E${eId} `:'__')+
+    `rew:<span style="color:#58a6ff">${rew.toFixed(1)}</span>`+
+    (tag?`<span class="lr-tag ${tagClass}">${tag}</span>`:'')+
+    `</span>`;
+  const log=document.getElementById('logDiv');
+  log.insertBefore(div,log.firstChild);
+  // FIX: cap log at 80 rows — trim from bottom (oldest entries)
+  while(log.children.length>80)log.removeChild(log.lastChild);
+}
+
+// ── Controls ────────────────────────────────────────────────────
+function togglePlay(){
+  if(!csvRows.length){alert('Load hybrid_drl_results.csv first.');return;}
+  if(playing)stop();else start();
+}
+function start(){
+  playing=true;
+  document.getElementById('playBtn').textContent='HALT';
+  document.getElementById('playBtn').classList.add('active');
+  function loop(){
+    if(!playing)return;
+    step();
+    timer=setTimeout(loop,parseInt(document.getElementById('spd').value));
+  }
+  loop();
+}
+function stop(){
+  playing=false;clearTimeout(timer);
+  document.getElementById('playBtn').textContent='EXECUTE';
+  document.getElementById('playBtn').classList.remove('active');
+}
+function resetSim(){
+  stop();
+  playIdx=0;optCnt=0;acuCnt=0;decCnt=0;totalRew=0;
+  simTime=0;packets=[];
+  eStats=[{realDet:0,decoyHits:0},{realDet:0,decoyHits:0}];
+  nState=NODES.map(makeNodeState);
+  eState=[makeEnemyState(),makeEnemyState()];
+  lastBottomHash='';
+
+  ['sOpt','sAcu','sDec'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('sRew').textContent='0.0';
+  document.getElementById('sEps').textContent='—';
+  document.getElementById('sPkt').textContent='0';
+  document.getElementById('stealth').textContent='0.0%';
+  document.getElementById('stealthBar').style.width='0%';
+  document.getElementById('simClock').textContent='T+ 0.0s';
+  document.getElementById('simClock').style.color='#58a6ff';
+  document.getElementById('logDiv').innerHTML='';
+  document.getElementById('csvWarn').style.display='none';
+  for(let e=0;e<2;e++){
+    document.getElementById(`ed${e}`).textContent='0';
+    document.getElementById(`edd${e}`).textContent='0';
+    document.getElementById(`ef${e}`).textContent='—';
+    const el=document.getElementById(`es${e}`);
+    el.textContent='PATROL'; el.className='ec-badge b-patrol';
+  }
+  buildBottomBar();
+}
+</script>
+</body>
+</html>
